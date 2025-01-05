@@ -14,7 +14,7 @@ ORDER BY id;
 
 UPDATE students
 SET finished_at = NOW()
-WHERE name = 'YourName'
+WHERE name = 'Yelyzaveta Lubenets'
 -- id = 1
 ;
 
@@ -32,10 +32,21 @@ WHERE name = 'YourName'
 -- 2) Round the obtained time result in "minutes" to tenths. [15.788888 -> 15.8]
 --              [ROUND(duration, 1) AS rounded_duration]
 
-SELECT *
--- TODO: Write your solution here
-FROM students
-;
+insert into students (name, age)
+values ('student 1', 24),
+       ('student 2', 30),
+        ('sudent 3', 35);
+
+UPDATE students
+SET finished_at = NOW()
+WHERE name in ('student 1', 'student 2');
+
+SELECT s.name,
+       round(extract(epoch from (s.finished_at - s.created_at)/ 60), 1) as minutes
+FROM students s
+where s.finished_at != s.created_at
+order by minutes
+limit 3;
 
 
 -- ------------------------------------------------------------------------------------------------
@@ -48,10 +59,10 @@ FROM students
 -- Note: Round the obtained time result in "minutes" to tenths. [15.788888 -> 15.8]
 -- Use the formula: ROUND(duration, 1) AS rounded_duration
 
-SELECT *
--- TODO: Write your solution here
-FROM students;
-
+SELECT count(s.id) as cnt,
+       round(extract(epoch from (max(s.finished_at) - min(s.created_at))/ 60), 1) as minutes,
+       round(extract(epoch from (max(s.finished_at) - min(s.created_at))/ 60), 1)/ count(s.id) as avg_minutes
+FROM students s;
 -- ------------------------------------------------------------------------------------------------
 -- #14. MEDIUM.
 -- What is the largest Big Amount in UAH equivalent on a non-overdue account ("max_curr_uah_eq")?

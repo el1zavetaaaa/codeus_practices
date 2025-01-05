@@ -6,9 +6,9 @@ VALUES ('UAH', 'Ukrainian hryvnia'),
 
 -- NBU rates by the dates
 INSERT INTO nbu_rates(ccy_date, ccy, rate)
-VALUES ('2024-12-05', 'UAH', 1.0),
-       ('2024-12-05', 'USD', 41.85),
-       ('2024-12-05', 'EUR', 44.35),
+VALUES (now(), 'UAH', 1.0),
+       (now(), 'USD', 41.85),
+       (now(), 'EUR', 44.35),
 
        ('2024-12-04', 'UAH', 1.0),
        ('2024-12-04', 'USD', 41.50),
