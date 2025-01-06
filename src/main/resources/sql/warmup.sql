@@ -94,6 +94,25 @@ group by t1.id
 order by t1.id;
 
 
+--hard
+drop table if exists temporary_current_rate;
+create temp table temporary_current_rate(
+    ccy  CHAR(3) PRIMARY KEY NOT NULL,
+    current_rate NUMERIC(6, 2)
+);
+
+insert into temporary_current_rate
+select nbu_rates.ccy, nbu_rates.rate
+from nbu_rates
+where ccy_date = '2024-12-05';
+
+select t1.id,
+       sum((a.amount * r.current_rate) / 100.0) as uah_eq_acc
+from users t1
+         join public.accounts a on t1.id = a.user_id
+         join temporary_current_rate r on a.currency = r.ccy
+group by t1.id
+order by t1.id;
 -- ------------------------------------------------------------------------------------------------
 -- #4. EASY.
 -- Get all the users which have more than one of accounts.
