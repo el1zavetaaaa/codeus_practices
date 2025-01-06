@@ -69,11 +69,28 @@ FROM students s;
 -- Result: "user_id", "acc_id", "max_curr_uah_eq"
 
 -- Note: See the "end_date" field and compare with the current date.
+drop table if exists temporary_nbu_rates;
+create temp table temporary_nbu_rates
+(
+    currency text primary key,
+    rate     NUMERIC(6, 2)
+);
 
-SELECT *
--- TODO: Write your solution here
-FROM accounts as a
+insert into temporary_nbu_rates
+select r.ccy, r.rate
+from nbu_rates r
+where r.ccy_date = current_date;
+
+select a.user_id as user_id,
+       a.id as acc_id,
+       (a.amount * tnr.rate) / 100.0 as max_curr_uah_eq
+from accounts as a
+join pg_temp.temporary_nbu_rates tnr on a.currency = tnr.currency
+and a.end_date >= current_date
+order by max_curr_uah_eq desc
+limit 1
 ;
+
 
 -- ------------------------------------------------------------------------------------------------
 -- #15. HARD.
@@ -85,9 +102,84 @@ FROM accounts as a
 -- Result: "user_id", "name", "cnt_acc", "sum_uah_ba_acc", "cnt_cred", "sum_uah_ba_cred", "diff"
 
 -- Note: use table 'nbu_rates' for rates for different types of currencies (rate for current day).
+drop table if exists temporary_nbu_rates;
+create temp table temporary_nbu_rates
+(
+    currency text primary key,
+    rate     NUMERIC(6, 2)
+);
 
+insert into temporary_nbu_rates
+select r.ccy, r.rate
+from nbu_rates r
+where r.ccy_date = current_date;
 
--- TODO: Write your solution here
+select u.id as user_id,
+       u.name as user_name,
+       count(a.id) as cnt_acc,
+       count(c.id) as cnt_cred,
+       sum((a.amount * tnr.rate) / 100.0) as sum_uah_ba_acc,
+       sum((c.amount * tnr.rate) / 100.0) as sum_uah_ba_cred,
+       sum((a.amount * tnr.rate) / 100.0) + sum((c.amount * tnr.rate) / 100.0) as diff
+from users u
+left join public.accounts a on u.id = a.user_id
+left join public.credits c on u.id = c.user_id
+join temporary_nbu_rates tnr on a.currency = tnr.currency
+group by u.id
+order by u.id;
+
+----
+DROP TABLE IF EXISTS current_nbu_rates;
+CREATE TEMP TABLE current_nbu_rates
+(
+    ccy          CHAR(3) PRIMARY KEY NOT NULL,
+    current_rate NUMERIC(6, 2)
+);
+
+-- b) Filling the temporary table the datas:
+INSERT INTO current_nbu_rates
+SELECT n.ccy, n.rate
+FROM nbu_rates as n
+WHERE ccy_date = CURRENT_DATE;
+
+-- c) Making the temporary table for accounts:
+CREATE TEMP TABLE temp_accounts AS
+SELECT u.id                                   as "user_id",
+       u.name,
+       count(a.id)                            as "cnt_acc",
+       sum(a.amount * n.current_rate / 100.0) as "sum_uah_ba_acc"
+FROM users as u
+         LEFT JOIN accounts as a on a.user_id = u.id
+         LEFT JOIN current_nbu_rates as n on n.ccy = a.currency
+GROUP BY u.id, u.name
+ORDER BY u.id
+;
+
+-- d) Making the temporary table for credits:
+CREATE TEMP TABLE temp_credits AS
+SELECT u.id                                   as "user_id",
+       u.name,
+       count(c.id)                            as "cnt_cred",
+       sum(c.amount * n.current_rate / 100.0) as "sum_uah_ba_cred"
+FROM users as u
+         LEFT JOIN credits c on c.user_id = u.id
+         LEFT JOIN current_nbu_rates as n on n.ccy = c.currency
+GROUP BY u.id, u.name
+ORDER BY u.id
+;
+
+-- e) Making the general query with the temporary table
+SELECT u.id                                   as "user_id",
+       u.name,
+       ta.cnt_acc,
+       ta.sum_uah_ba_acc,
+       tc.cnt_cred,
+       tc.sum_uah_ba_cred,
+       ta.sum_uah_ba_acc + tc.sum_uah_ba_cred as "diff"
+FROM users as u
+         LEFT JOIN temp_accounts as ta on ta.user_id = u.id
+         LEFT JOIN temp_credits as tc on tc.user_id = u.id
+ORDER BY u.id;
 
 
 -- ------------------------------------------------------------------------------------------------
