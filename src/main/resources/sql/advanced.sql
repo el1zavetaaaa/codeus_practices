@@ -166,5 +166,53 @@ order by u.id;
 -- Calculate "diff" and identify customers whose total amount on accounts does not exceed
 -- (i.e. is less than) the total Big Amount of their credits.
 -- Result: "user_id", "name", "cnt_acc", "sum_uah_ba_acc", "cnt_cred", "sum_uah_ba_cred", "diff"
+drop table if exists temporary_nbu_rates;
+create temp table temporary_nbu_rates
+(
+    tmp_ccy char(3),
+    tmp_rate numeric(6,2)
+);
 
--- TODO: Write your solution here
+insert into pg_temp.temporary_nbu_rates
+select nr.ccy, nr.rate
+from nbu_rates nr
+where nr.ccy_date = current_date;
+
+drop table if exists temp_accounts;
+create temp table temp_accounts as
+select count(a.id)                        as cnt_acc,
+       sum((a.amount * tnr.tmp_rate) / 100.0) as sum_uah_ba_acc,
+       u.id                               as user_id,
+       u.name                             as user_name
+from accounts a
+         left join public.users u on u.id = a.user_id
+         join pg_temp.temporary_nbu_rates tnr on a.currency = tnr.tmp_ccy
+where a.end_date >= current_date
+group by u.id, u.name
+order by u.id;
+
+drop table if exists temp_creds;
+create temp table temp_creds as
+select count(c.id)                        as cnt_cred,
+       sum((c.amount * tnr.tmp_rate) / 100.0) as sum_uah_ba_cred,
+       u.id                               as user_id,
+       u.name                             as user_name
+from credits c
+         left join public.users u on u.id = c.user_id
+         join pg_temp.temporary_nbu_rates tnr on c.currency = tnr.tmp_ccy
+where c.end_date >= current_date
+group by u.id, u.name
+order by u.id;
+
+select u.id as user_id,
+       u.name as user_name,
+       tas.cnt_acc as cnt_acc,
+       tcs.cnt_cred as cnt_cred,
+       tas.sum_uah_ba_acc,
+       tcs.sum_uah_ba_cred,
+       tas.sum_uah_ba_acc + tcs.sum_uah_ba_cred as diff
+from users u
+         left join temp_accounts tas on tas.user_id = u.id
+         left join temp_creds tcs on tcs.user_id = u.id
+where tas.sum_uah_ba_acc < abs(tcs.sum_uah_ba_cred)
+order by u.id;
