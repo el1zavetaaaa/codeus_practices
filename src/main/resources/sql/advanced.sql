@@ -204,13 +204,28 @@ where c.end_date >= current_date
 group by u.id, u.name
 order by u.id;
 
-select u.id as user_id,
-       u.name as user_name,
-       tas.cnt_acc as cnt_acc,
+select u.id         as user_id,
+       u.name       as user_name,
+       tas.cnt_acc  as cnt_acc,
        tcs.cnt_cred as cnt_cred,
-       tas.sum_uah_ba_acc,
-       tcs.sum_uah_ba_cred,
-       tas.sum_uah_ba_acc + tcs.sum_uah_ba_cred as diff
+       case
+           when tas.sum_uah_ba_acc is null
+               then 0.0
+           else tas.sum_uah_ba_acc
+           end      as sum_uah_ba_acc,
+       case
+           when tcs.sum_uah_ba_cred is null
+               then 0.0
+           else tcs.sum_uah_ba_cred
+           end      as sum_uah_ba_cred,
+
+       case
+           when sum_uah_ba_acc is null
+               then sum_uah_ba_cred
+           when sum_uah_ba_cred is null then sum_uah_ba_acc
+           else sum_uah_ba_acc + tcs.sum_uah_ba_cred
+           end      as diff
+
 from users u
          left join temp_accounts tas on tas.user_id = u.id
          left join temp_creds tcs on tcs.user_id = u.id
