@@ -231,3 +231,98 @@ from users u
          left join temp_creds tcs on tcs.user_id = u.id
 where tas.sum_uah_ba_acc < abs(tcs.sum_uah_ba_cred)
 order by u.id;
+
+
+-- Requirements
+-- The application allows its users to watch videos, add comments and make friends by connecting with other users.
+-- Therefore it should store information about
+-- users (first name, last name, email),
+-- videos (name, upload time, location (URL)),
+-- comments (text, author, time), and
+-- friends (which users are connected).
+--
+-- Suggestions
+-- PLEASE DON'T OVERTHINK & TRY TO KEEP IT SIMPLE.
+
+create table users
+(
+    id         bigserial
+        constraint users_pk primary key,
+    first_name text not null,
+    last_name  text not null,
+    email      text
+        constraint users_email_unique unique
+);
+
+
+create table videos
+(
+    id          bigserial
+        constraint videos_pk primary key,
+    name        text not null,
+    upload_time timestamp default now(),
+    location    text not null,
+    user_id     bigint
+        constraint videos_users_fk references users (id)
+);
+
+create table comments
+(
+    id        bigserial
+        constraint comments_id primary key,
+    body      text not null,
+    author    bigint
+        constraint user_comments references users (id),
+    video_id  bigint
+        constraint video_comments references videos (id),
+    create_at timestamp default now()
+);
+
+create table user_friends
+(
+    user_id   bigint
+        constraint user_friends_user_fk references users (id),
+    friend_id bigint
+        constraint user_friends_friend_fk references users (id)
+);
+
+insert into users(first_name, last_name, email)
+values ('Liza',
+        'Lubenets',
+        'yllbnts@gmail.com'),
+       ('Dima',
+        'Petrov',
+        'dmitrijpetrov@gmail.com'),
+       ('Zoya',
+        'Lubenets',
+        'zoya1970@gmail.com');
+
+
+insert into videos(name, upload_time, location, user_id)
+values ('sql tutorial',
+        now(),
+        'https://youtube.com/yllbnts',
+        1),
+       ('java tutorial',
+        now(),
+        'https://medium.com/yllbnts',
+        1);
+
+
+insert into comments(body, author, video_id, create_at)
+values ('great lesson',
+        1,
+        2,
+        now()),
+       ('wonderful',
+        2,
+        2,
+        now());
+
+insert into user_friends
+values (1, 2),
+       (2, 3),
+       (1, 3);
+
+
+drop table if exists users, user_friends, videos, comments;
